@@ -9,12 +9,26 @@ import { createGalaxyApi } from "@galaxyproject/client-api";
 
 // Get the Galaxy URL from command line or use default
 const galaxyUrl = process.argv[2] || "http://localhost:8080";
+// Get API key from command line (if provided)
+const apiKey = process.argv[3];
 
-// Create a Galaxy API client
+// Create a standard Galaxy API client (without authentication)
 const api = createGalaxyApi(galaxyUrl);
 
+// Create an authenticated Galaxy API client (if API key is provided)
+const authApi = apiKey
+    ? createGalaxyApi({
+          baseUrl: galaxyUrl,
+          apiKey: apiKey,
+          headers: {
+              Accept: "application/json",
+              "User-Agent": "GalaxyClientDemo/1.0",
+          },
+      })
+    : null;
+
 console.log(`Connecting to Galaxy at: ${galaxyUrl}`);
-console.log("Fetching tools...");
+console.log(apiKey ? "Using authentication with provided API key" : "No API key provided, running in anonymous mode");
 
 async function listTools() {
     try {
@@ -94,5 +108,86 @@ async function listTools() {
     }
 }
 
-// Run the tool listing function
-listTools();
+async function getCurrentUser() {
+    if (!authApi) {
+        console.log("\nAuthentication required to fetch user information.");
+        console.log("Run with API key: node index.js <galaxy-url> <api-key>");
+        return null;
+    }
+
+    try {
+        console.log("\nFetching current user information...");
+        const { data, error } = await authApi.GET("/api/users/current");
+
+        if (error) {
+            console.error("Error fetching current user:", error);
+            return null;
+        }
+
+        console.log("\nCurrent User Information:");
+        console.log(`- Username: ${data.username}`);
+        console.log(`- Email: ${data.email}`);
+        console.log(`- Total disk usage: ${data.total_disk_usage}`);
+        return data;
+    } catch (err) {
+        console.error("Error in getCurrentUser:", err);
+        return null;
+    }
+}
+
+async function getUserHistories() {
+    if (!authApi) {
+        console.log("\nAuthentication required to fetch histories.");
+        console.log("Run with API key: node index.js <galaxy-url> <api-key>");
+        return [];
+    }
+
+    try {
+        console.log("\nFetching user histories...");
+        const { data, error } = await authApi.GET("/api/histories", {
+            params: {
+                query: {
+                    deleted: false,
+                    published: false,
+                },
+            },
+        });
+
+        if (error) {
+            console.error("Error fetching histories:", error);
+            return [];
+        }
+
+        console.log(`\nFound ${data.length} histories:`);
+
+        // Print summary of histories
+        for (const history of data) {
+            console.log(`\n## History: ${history.name}`);
+            console.log(`- ID: ${history.id}`);
+            console.log(`- Size: ${history.nice_size}`);
+            console.log(`- State: ${history.state}`);
+            console.log(`- Tags: ${history.tags.length > 0 ? history.tags.join(", ") : "None"}`);
+        }
+
+        return data;
+    } catch (err) {
+        console.error("Error in getUserHistories:", err);
+        return [];
+    }
+}
+
+// Run the demo
+async function runDemo() {
+    // First list tools (always works, even without authentication)
+    await listTools();
+
+    // If API key provided, run authenticated examples
+    if (apiKey) {
+        const user = await getCurrentUser();
+        if (user) {
+            await getUserHistories();
+        }
+    }
+}
+
+runDemo();
