@@ -8,6 +8,6 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@galaxyproject/client-api": "~/work/galaxy/client-api/"
+    "@galaxyproject/galaxy-api-client": "^25.0.0-dev.0"
   }
 }
