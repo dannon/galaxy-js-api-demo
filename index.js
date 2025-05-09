@@ -5,7 +5,7 @@
  * to list available tools from a Galaxy instance
  */
 
-import { createGalaxyApi } from "@galaxyproject/client-api";
+import { createGalaxyApi } from "@galaxyproject/galaxy-api-client";
 
 // Get the Galaxy URL from command line or use default
 const galaxyUrl = process.argv[2] || "http://localhost:8080";
